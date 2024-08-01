@@ -2,18 +2,14 @@ import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
-import org.hamcrest.CoreMatchers;
-import org.junit.After;
+import org.apache.http.HttpStatus;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import ru.yandex.praktikum.Courier;
 import ru.yandex.praktikum.Order;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 
@@ -38,15 +34,15 @@ public class OrderCreateTest {
 
     @Before
     public void setUp() {
-        RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru";
+        RestAssured.baseURI = Api.baseUrl;
     }
 
     @Test
     @DisplayName("Create order")
     public void createOrder() {
         Response response = requestOrders(colors);
-        validateStatus(response, 201);
-        validateTrack(response);
+        CommonSteps.validateStatus(response, HttpStatus.SC_CREATED);
+        OrderSteps.validateTrack(response);
     }
 
     @Step("Make create order request")
@@ -65,19 +61,7 @@ public class OrderCreateTest {
         return given()
                 .header("Content-type", "application/json")
                 .body(order)
-                .post("/api/v1/orders");
-    }
-
-    @Step("Validate statusCode")
-    private void validateStatus(Response response, int statusCode) {
-        response
-                .then()
-                .statusCode(statusCode);
-    }
-
-    @Step("Validate has track field")
-    private void validateTrack(Response response) {
-        response.then().body("track", CoreMatchers.notNullValue());
+                .post(Api.orders);
     }
 
     private static final String COLOR_BLACK = "BLACK";

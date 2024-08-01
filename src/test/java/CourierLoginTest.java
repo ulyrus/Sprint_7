@@ -1,8 +1,7 @@
-import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.RestAssured;
-import io.restassured.config.FailureConfig;
 import io.restassured.response.Response;
+import org.apache.http.HttpStatus;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
@@ -18,8 +17,8 @@ public class CourierLoginTest {
 
     @Before
     public void setUp() {
-        RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru";
-        courier = new Courier(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        RestAssured.baseURI = Api.baseUrl;
+        courier = new Courier(UUID.randomUUID().toString(), UUID.randomUUID().toString(), null);
         createCourier(courier);
     }
 
@@ -27,29 +26,29 @@ public class CourierLoginTest {
     @DisplayName("Login courier")
     public void login() {
         Response response = login(courier);
-        validateStatus(response, 200);
-        validateId(response);
+        CommonSteps.validateStatus(response, HttpStatus.SC_OK);
+        CourierLoginSteps.validateId(response);
     }
 
     @Test
     @DisplayName("Can't login courier without login")
     public void loginWithoutLogin() {
-        Response response = login("", courier.getPassword());
-        validateStatus(response, 400);
+        Response response = CourierLoginSteps.login(given(), "", courier.getPassword());
+        CommonSteps.validateStatus(response, HttpStatus.SC_BAD_REQUEST);
     }
 
     @Test
     @DisplayName("Can't login courier without password")
     public void loginWithoutPassword() {
-        Response response = login(courier.getLogin(), "");
-        validateStatus(response, 400);
+        Response response = CourierLoginSteps.login(given(), courier.getLogin(), "");
+        CommonSteps.validateStatus(response, HttpStatus.SC_BAD_REQUEST);
     }
 
     @Test
     @DisplayName("Can't login courier with wrong password")
     public void loginErrorWithWrongData() {
-        Response response = login(courier.getLogin(), "password");
-        validateStatus(response, 404);
+        Response response = CourierLoginSteps.login(given(), courier.getLogin(), "password");
+        CommonSteps.validateStatus(response, HttpStatus.SC_NOT_FOUND);
     }
 
     @After
@@ -58,27 +57,7 @@ public class CourierLoginTest {
     }
 
     private Response login(Courier courier) {
-        return login(courier.getLogin(), courier.getPassword());
-    }
-
-    @Step("login")
-    private Response login(String login, String password) {
-        return given()
-                .header("Content-type", "application/json")
-                .body(new Courier(login, password))
-                .post("/api/v1/courier/login");
-    }
-
-    @Step("Validate statusCode")
-    private void validateStatus(Response response, int statusCode) {
-        response
-                .then()
-                .statusCode(statusCode);
-    }
-
-    @Step("Validate has id field")
-    private void validateId(Response response) {
-        response.then().body("id", CoreMatchers.notNullValue());
+        return CourierLoginSteps.login(given(), courier.getLogin(), courier.getPassword());
     }
 
     private Response createCourierResponse(Courier courier) {
@@ -91,25 +70,18 @@ public class CourierLoginTest {
     private void createCourier(Courier courier) {
         createCourierResponse(courier)
                 .then()
-                .statusCode(201)
+                .statusCode(HttpStatus.SC_CREATED)
                 .body("ok", CoreMatchers.equalTo(true));
     }
 
-    private String getCourierId(String login, String password) {
-        return given()
+    private void deleteCourier(Courier courier) {
+        String courierId = given()
                 .header("Content-type", "application/json")
-                .body(new Courier(login, password))
-                .post("/api/v1/courier/login")
+                .body(new Courier(courier.getLogin(), courier.getPassword(), null))
+                .post(Api.courierLogin)
                 .body()
                 .path("id")
                 .toString();
-    }
-
-    private void deleteCourier(String courierId) {
-        given().delete("/api/v1/courier/" + courierId);
-    }
-
-    private void deleteCourier(Courier courier) {
-        deleteCourier(getCourierId(courier.getLogin(), courier.getPassword()));
+        given().delete(Api.courier + "/" + courierId);
     }
 }
