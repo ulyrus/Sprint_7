@@ -1,17 +1,18 @@
 import io.qameta.allure.Step;
 import io.restassured.response.Response;
-import io.restassured.specification.RequestSpecification;
 import org.hamcrest.CoreMatchers;
 import ru.yandex.praktikum.Courier;
+
+import static io.restassured.RestAssured.given;
 
 public class CourierLoginSteps {
 
     @Step("login")
-    public static Response login(RequestSpecification given, String login, String password) {
-        return given
+    public static Response login(String login, String password) {
+        return given()
                 .header("Content-type", "application/json")
                 .body(new Courier(login, password, null))
-                .post(Api.courierLogin);
+                .post(Api.COURIER_LOGIN);
     }
 
     @Step("Validate has id field")
